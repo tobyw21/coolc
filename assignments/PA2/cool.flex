@@ -42,26 +42,51 @@ extern YYSTYPE cool_yylval;
 /*
  *  Add Your own definitions here
  */
+char const_string[MAX_STR_CONST];
+
 
 %}
 
 /*
  * Define names for regular expressions here.
  */
+%option noyywrap
+%x LINE_COMMENT NESTED_COMMENT
 
 DARROW          =>
+ASSIGN          <-
+GT              >
+LT              <
+GE              >=
+LE              <=
 
 %%
+
+/*
+ * update new line
+ *
+ */
+
+\n          { curr_lineno++; }
+[ \f\r\t\v]+ {}
 
  /*
   *  Nested comments
   */
-
+"--"        { BEGIN LINE_COMMENT; }
+"(\*"       { BEGIN NESTED_COMMENT; }
+"\*)"       { strcpy(cool_yylval.error_msg, "Unmatched *)"); return (ERROR); }
+<LINE_COMMENT>.*            {}
+<NESTED_COMMENT>.*\*\)      {}
+<NESTED_COMMENT>.*<<EOF>>   { strcpy(cool_yylval.error_msg, "EOF in comment"); return (ERROR); }
 
  /*
   *  The multiple-character operators.
   */
 {DARROW}		{ return (DARROW); }
+{ASSIGN}    { return (ASSIGN); }
+{GE}        { return (GE); }
+{LE}        { return (LE); }
 
  /*
   * Keywords are case-insensitive except for the values true and false,
