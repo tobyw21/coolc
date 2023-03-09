@@ -39,67 +39,101 @@ extern int verbose_flag;
 
 extern YYSTYPE cool_yylval;
 
-/*
- *  Add Your own definitions here
- */
+
+	/*
+	*  Add Your own definitions here
+	*/
 char const_string[MAX_STR_CONST];
 
 
 %}
 
-/*
- * Define names for regular expressions here.
- */
+	/*
+	* Define names for regular expressions here.
+	*/
 %option noyywrap
 %x LINE_COMMENT NESTED_COMMENT
 
 DARROW          =>
 ASSIGN          <-
-GT              >
-LT              <
-GE              >=
-LE              <=
+LE				<=
+DIGIT			[0-9]
 
 %%
 
-/*
- * update new line
- *
- */
+	/*
+ 	* update new line
+ 	*
+ 	*/
 
-\n          { curr_lineno++; }
-[ \f\r\t\v]+ {}
+"\n"          { curr_lineno++; }
+[ \f\r\t\v]+  {}
 
- /*
-  *  Nested comments
-  */
-"--"        { BEGIN LINE_COMMENT; }
-"(\*"       { BEGIN NESTED_COMMENT; }
-"\*)"       { strcpy(cool_yylval.error_msg, "Unmatched *)"); return (ERROR); }
-<LINE_COMMENT>.*            {}
-<NESTED_COMMENT>.*\*\)      {}
-<NESTED_COMMENT>.*<<EOF>>   { strcpy(cool_yylval.error_msg, "EOF in comment"); return (ERROR); }
+	/*
+  	*  Nested comments
+  	*/
+"(*"       { BEGIN NESTED_COMMENT; }
+"*)"       { strcpy(cool_yylval.error_msg, "Unmatched *)"); return (ERROR); }
+"--"       { BEGIN LINE_COMMENT; }
+	/*<LINE_COMMENT>.*            {}
+	<NESTED_COMMENT>.*\*\)      {}
+	<NESTED_COMMENT><<EOF>>   { strcpy(cool_yylval.error_msg, "EOF in comment"); return (ERROR); }
+	*/
 
- /*
-  *  The multiple-character operators.
-  */
-{DARROW}		{ return (DARROW); }
+	/*
+	*  The multiple-character operators.
+	*/
+{DARROW}	{ return (DARROW); }
 {ASSIGN}    { return (ASSIGN); }
-{GE}        { return (GE); }
 {LE}        { return (LE); }
+"+"			{ return int('+'); }
+"/"			{ return int('/'); }
+"-"			{ return int('-'); }
+"*"			{ return int('*'); }
+"="			{ return int('='); }
+"<"			{ return int('<'); }
+"."			{ return int('.'); }
+"~"			{ return int('~'); }
+","			{ return int(','); }
+";"			{ return int(';'); }
+":"			{ return int(':'); }
+"("			{ return int('('); }
+")"			{ return int(')'); }
+"@"			{ return int('@'); }
+"{"			{ return int('{'); }
+"}"			{ return int('}'); }
 
- /*
-  * Keywords are case-insensitive except for the values true and false,
-  * which must begin with a lower-case letter.
-  */
 
 
- /*
-  *  String constants (C syntax)
-  *  Escape sequence \c is accepted for all characters c. Except for 
-  *  \n \t \b \f, the result is c.
-  *
-  */
+ 	/*
+  	* Keywords are case-insensitive except for the values true and false,
+  	* which must begin with a lower-case letter.
+  	*/
+(?i:class)		{ return CLASS; }
+(?i:else) 		{ return ELSE; }
+(?i:fi) 		{ return FI; }
+(?i:if) 		{ return IF; }
+(?i:inherits) 	{ return INHERITS; }
+(?i:isvoid) 	{ return ISVOID; }
+(?i:let) 		{ return LET; }
+(?i:loop) 		{ return LOOP; }
+(?i:pool) 		{ return POOL; }
+(?i:then) 		{ return THEN; }
+(?i:while) 		{ return WHILE; }
+(?i:case) 		{ return CASE; }
+(?i:esac) 		{ return ESAC; }
+(?i:new) 		{ return NEW; }
+(?i:of) 		{ return OF; }
+(?i:not) 		{ return NOT; }
+(?-i:false) 	{ cool_yylval.boolean = false; return BOOL_CONST; }
+(?-i:true) 		{ cool_yylval.boolean = true; return BOOL_CONST; }
+
+ 	/*
+  	*  String constants (C syntax)
+  	*  Escape sequence \c is accepted for all characters c. Except for 
+  	*  \n \t \b \f, the result is c.
+  	*
+  	*/
 
 
 %%
