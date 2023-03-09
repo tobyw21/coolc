@@ -52,7 +52,7 @@ char const_string[MAX_STR_CONST];
 	* Define names for regular expressions here.
 	*/
 %option noyywrap
-%x LINE_COMMENT NESTED_COMMENT
+%x LINE_COMMENT NESTED_COMMENT STRING
 
 DARROW          =>
 ASSIGN          <-
@@ -72,14 +72,19 @@ DIGIT			[0-9]
 	/*
   	*  Nested comments
   	*/
-"(*"       { BEGIN NESTED_COMMENT; }
-"*)"       { strcpy(cool_yylval.error_msg, "Unmatched *)"); return (ERROR); }
-"--"       { BEGIN LINE_COMMENT; }
-	/*<LINE_COMMENT>.*            {}
-	<NESTED_COMMENT>.*\*\)      {}
-	<NESTED_COMMENT><<EOF>>   { strcpy(cool_yylval.error_msg, "EOF in comment"); return (ERROR); }
-	*/
+"(*"       					  { BEGIN NESTED_COMMENT; }
+<NESTED_COMMENT>[^\n(*]*      {}
+<NESTED_COMMENT>[()*]		  {}
+<NESTED_COMMENT>"*)"		  { BEGIN 0; }	
+"*)"       					  { cool_yylval.error_msg = "Unmatched *)"; return (ERROR); }
+<NESTED_COMMENT><<EOF>>   	  { cool_yylval.error_msg = "EOF in comment"; BEGIN 0; return (ERROR); }
 
+	/*
+	* line comment
+	*/
+"--"       { BEGIN LINE_COMMENT; }
+<LINE_COMMENT>.*            {}
+<LINE_COMMENT>\n 			{ curr_lineno++; BEGIN 0; }
 	/*
 	*  The multiple-character operators.
 	*/
@@ -128,12 +133,34 @@ DIGIT			[0-9]
 (?-i:false) 	{ cool_yylval.boolean = false; return BOOL_CONST; }
 (?-i:true) 		{ cool_yylval.boolean = true; return BOOL_CONST; }
 
+	/* TYPEID*/
+[A-Z][A-Za-z0-9_]* { cool_yylval.symbol = idtable.add_string(yytext); return TYPEID; }
+
+	/* OBJID */
+[a-z][A-Za-z0-9_]* { cool_yylval.symbol = idtable.add_string(yytext); return OBJECTID; }
+
+	/* int */
+{DIGIT}*		   { cool_yylval.symbol = inttable.add_string(yytext); return INT_CONST; }
+
+[^\n] 			   { cool_yylval.error_msg = yytext; return ERROR; }
+
  	/*
   	*  String constants (C syntax)
   	*  Escape sequence \c is accepted for all characters c. Except for 
   	*  \n \t \b \f, the result is c.
   	*
   	*/
+\"						{ BEGIN STRING; yymore(); }
+<STRING>\\[^\n]			{ yymore(); }
+<STRING><<EOF>> 		{ cool_yylval.error_msg = "EOF in string const"; BEGIN 0; yyrestart(yyin); return ERROR; }
+<STRING>\\\n			{ curr_lineno++; yymore(); }
+<STRING>\n 				{ cool_yylval.error_msg = "Unterminated string const"; BEGIN 0; curr_lineno++; return ERROR; }
+<STRING>\\0				{ cool_yylval.error_msg = "Unterminated string const"; BEGIN 0; return ERROR; }
+<STRING>\"				{ 
 
 
+	cool_yylval.symbol = stringtable.add_string("");
+	BEGIN 0;
+	return STR_CONST;
+}
 %%
